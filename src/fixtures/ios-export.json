@@ -1,0 +1,24 @@
+{
+  "categories": [
+    { "id": "1182e973-d040-45a1-b52e-0d792a3733ae", "name": "Clothing", "sortOrder": 0 },
+    { "id": "2ffdfbb1-f1fd-4cac-a1bb-0a1110bfd3e4", "name": "Documents", "sortOrder": 1 }
+  ],
+  "items": [
+    { "id": "31c4fe82-9dd1-4ca3-b421-fc8ea673d84a", "name": "T-shirt", "categoryId": "1182e973-d040-45a1-b52e-0d792a3733ae", "quantity": 2, "notes": "", "isAlwaysPacked": false, "isOptional": false, "tripTypes": ["weekend"], "destinations": [] },
+    { "id": "463da4d2-2d1f-44d8-a190-17a0188d6fe6", "name": "Passport", "categoryId": "2ffdfbb1-f1fd-4cac-a1bb-0a1110bfd3e4", "quantity": 1, "notes": "Renewed", "isAlwaysPacked": false, "isOptional": false, "tripTypes": ["international", "domestic", "beach", "work", "familyVisit"], "destinations": [] }
+  ],
+  "trips": [
+    { "id": "56969729-b4cf-43f8-b878-7ed8a66e98e2", "name": "Montreal", "destination": "Montreal", "startDate": "2026-01-09", "endDate": "2026-01-11", "tripType": "weekend", "isArchived": false },
+    { "id": "63d276f2-1f53-45d2-96fe-0040c0f6a7a0", "name": "Tokyo", "destination": "Tokyo", "startDate": "2026-02-01", "endDate": "2026-02-10", "tripType": "international", "isArchived": false },
+    { "id": "7345d525-ef66-42a4-8f06-7d2aeeb9f3a4", "name": "Ottawa", "destination": "Ottawa", "startDate": "2026-03-02", "endDate": "2026-03-04", "tripType": "domestic", "isArchived": false },
+    { "id": "870e7cc3-9177-4510-81d3-314c2b3d77fd", "name": "Beach", "destination": "Miami", "startDate": "2026-04-02", "endDate": "2026-04-06", "tripType": "beach", "isArchived": false },
+    { "id": "9a801212-89e0-4eb0-9705-709b6e9a8fc3", "name": "Conference", "destination": "Chicago", "startDate": "2026-05-10", "endDate": "2026-05-12", "tripType": "work", "isArchived": false },
+    { "id": "aa9d51fe-757f-498e-985a-03b621de9fe5", "name": "Family", "destination": "Halifax", "startDate": "2026-06-10", "endDate": "2026-06-15", "tripType": "familyVisit", "isArchived": false }
+  ],
+  "checklist": [
+    { "id": "bba1365a-14c2-4f94-96b2-5e3f0b112301", "tripId": "56969729-b4cf-43f8-b878-7ed8a66e98e2", "itemId": "31c4fe82-9dd1-4ca3-b421-fc8ea673d84a", "isPacked": true, "quantity": 2, "notes": "Warm one", "wasManuallyAdded": false }
+  ],
+  "templates": [
+    { "id": "cce265fb-76e1-4f7d-9146-8aa6491a740e", "name": "Weekend away", "createdAt": "2026-01-01T12:00:00.000Z", "items": [{ "itemId": "31c4fe82-9dd1-4ca3-b421-fc8ea673d84a", "quantity": 2, "notes": "" }] }
+  ]
+}
