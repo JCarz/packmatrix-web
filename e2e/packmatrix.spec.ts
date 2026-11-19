@@ -18,7 +18,7 @@ test('creates, packs, duplicates, templates, exports, and imports a trip', async
   await page.getByRole('button', { name: '+ Add Item' }).click();
   await sheet.getByText('E2E Socks', { exact: true }).click();
   await sheet.getByRole('button', { name: 'Done' }).click();
-  await page.locator('li').filter({ hasText: 'E2E Socks' }).filter({ hasText: '⭕️' }).click();
+  await page.getByRole('button', { name: 'Mark E2E Socks packed' }).click();
 
   await page.getByRole('button', { name: 'Duplicate' }).click();
   await sheet.getByLabel('Trip Name').fill('E2E duplicate');

@@ -4,3 +4,4 @@ dist/
 *.log
 .loop
 test-results/
+screenshots/

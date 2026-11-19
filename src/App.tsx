@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { TRIP_TYPES, TRIP_LABEL, type Item, type State, type Trip, type TripItem, type TripType } from './types';
 import {
   addDays, applyTemplate, byCategory, cmp, copyChecklist, fmtDate, generateChecklist, manuallyAdd,
@@ -14,11 +14,32 @@ type Modal =
   | { k: 'addItems'; id: string } | { k: 'template'; id: string } | { k: 'checklistItem'; id: string }
   | { k: 'categories' } | null;
 interface Ctx { s: State; setS: (s: State) => void; say: (m: string, undo?: State) => void; close: () => void }
+type IconName = 'grid' | 'bag' | 'chart' | 'settings' | 'check' | 'plus' | 'edit' | 'trash' | 'archive';
 
 const label = (t: TripType) => TRIP_LABEL[t];
 const newItem = (name: string, categoryId: string): Item => ({
   id: uid(), name, categoryId, quantity: 1, notes: '', isAlwaysPacked: false, isOptional: false, tripTypes: [], destinations: [],
 });
+
+function Icon({ name, size = 24 }: { name: IconName; size?: number }) {
+  const p = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const paths: Record<IconName, ReactNode> = {
+    grid: <><rect {...p} x="3" y="3" width="7" height="7" rx="1" /><rect {...p} x="14" y="3" width="7" height="7" rx="1" /><rect {...p} x="3" y="14" width="7" height="7" rx="1" /><rect {...p} x="14" y="14" width="7" height="7" rx="1" /></>,
+    bag: <><path {...p} d="M5 8h14l1 12H4L5 8Z" /><path {...p} d="M9 8V6a3 3 0 0 1 6 0v2" /></>,
+    chart: <><path {...p} d="M4 20V10" /><path {...p} d="M10 20V4" /><path {...p} d="M16 20v-7" /><path {...p} d="M22 20H2" /></>,
+    settings: <><circle {...p} cx="12" cy="12" r="3" /><path {...p} d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56v.08h-3v-.08A1.7 1.7 0 0 0 10.66 18.7a1.7 1.7 0 0 0-1.88.34l-.06.06L6.6 16.98l.06-.06A1.7 1.7 0 0 0 7 15.04a1.7 1.7 0 0 0-1.56-1.04h-.08v-3h.08A1.7 1.7 0 0 0 7 9.96a1.7 1.7 0 0 0-.34-1.88L6.6 8.02 8.72 5.9l.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.04-1.56V4.7h3v.08a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.12 2.12-.06.06A1.7 1.7 0 0 0 19.4 10a1.7 1.7 0 0 0 1.56 1.04h.08v3h-.08A1.7 1.7 0 0 0 19.4 15Z" /></>,
+    check: <path {...p} d="m5 12 4 4L19 6" />,
+    plus: <path {...p} d="M12 5v14M5 12h14" />,
+    edit: <><path {...p} d="m4 20 4.2-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" /><path {...p} d="m13.8 7.2 3 3" /></>,
+    trash: <><path {...p} d="M4 7h16M10 11v5M14 11v5M9 7l1-3h4l1 3M6 7l1 14h10l1-14" /></>,
+    archive: <><path {...p} d="M4 7h16v13H4zM3 4h18v3H3zM9 12h6" /></>,
+  };
+  return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
+}
+
+function EmptyIllustration({ kind }: { kind: 'trips' | 'items' }) {
+  return <svg className="empty-illustration" viewBox="0 0 120 88" aria-hidden="true"><rect x="22" y="24" width="76" height="48" rx="12" fill="none" stroke="currentColor" strokeWidth="3" /><path d={kind === 'trips' ? 'M45 24v-7a15 15 0 0 1 30 0v7M37 48h46' : 'M40 42h40M40 54h28M30 25h60'} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>;
+}
 
 export default function App() {
   const [initial] = useState(load);
@@ -39,14 +60,14 @@ export default function App() {
   }, [toast]);
 
   const c: Ctx = { s, setS, say: (msg, undo) => setToast({ msg, undo }), close: () => setModal(null) };
-  const tabs: [Tab, string][] = [['master', '▦ Master'], ['trips', '🧳 Trips'], ['stats', '📊 Stats'], ['settings', '⚙︎ Settings']];
+  const tabs: [Tab, string, IconName][] = [['master', 'Master', 'grid'], ['trips', 'Trips', 'bag'], ['stats', 'Stats', 'chart'], ['settings', 'Settings', 'settings']];
 
   if (recoveryMessage) return <StorageRecovery message={recoveryMessage} onContinue={() => { setS(seed()); setRecoveryMessage(undefined); }} />;
 
   return (
     <div className="app">
-      <nav>{tabs.map(([k, l]) => (
-        <button key={k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setTripId(null); }}>{l}</button>
+      <nav>{tabs.map(([k, l, icon]) => (
+        <button key={k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setTripId(null); }}><Icon name={icon} /><span>{l}</span></button>
       ))}</nav>
       <main>
         {tab === 'master' && <Master c={c} setModal={setModal} />}
@@ -88,8 +109,9 @@ const Head = ({ title, children }: { title: string; children?: ReactNode }) => (
 );
 const Sheet = ({ title, onSave, disabled, c, children }: { title: string; onSave: () => void; disabled?: boolean; c: Ctx; children: ReactNode }) => (
   <>
-    <div className="head"><button onClick={c.close}>Cancel</button><b>{title}</b><button className="pri" disabled={disabled} onClick={onSave}>Save</button></div>
-    <div className="form">{children}</div>
+    <div className="sheet-head"><button onClick={c.close}>Cancel</button><b>{title}</b></div>
+    <div className="form" onFocusCapture={(e) => (e.target as HTMLElement).scrollIntoView({ block: 'center', behavior: 'smooth' })}>{children}</div>
+    <div className="sheet-footer"><button className="pri" disabled={disabled} onClick={onSave}>Save</button></div>
   </>
 );
 
@@ -103,10 +125,10 @@ function Master({ c, setModal }: { c: Ctx; setModal: (m: Modal) => void }) {
         <button onClick={() => setModal({ k: 'quick' })}>Quick Add</button>
         <button onClick={() => setModal({ k: 'categories' })}>Categories</button>
       </Head>
-      {!s.items.length && <p className="empty">No packing items yet. Add items to build your reusable master list.</p>}
+      {!s.items.length && <div className="empty-state"><EmptyIllustration kind="items" /><p>Build a reusable master list for every trip.</p><button className="pri" onClick={() => setModal({ k: 'item' })}>Add your first item</button></div>}
       {byCategory(s.items, (i) => i.categoryId, (i) => i.name, s.categories).map(([cat, items]) => (
         <div key={cat.id}>
-          <h3>{cat.name}</h3>
+          <h3 className="section-title">{cat.name}</h3>
           <ul>{items.map((i) => (
             <li key={i.id} onClick={() => setModal({ k: 'item', id: i.id })}>
               <div><b>{i.name}</b>{i.quantity > 1 && ` ×${i.quantity}`}{i.isOptional && <em> · Optional</em>}</div>
@@ -115,6 +137,7 @@ function Master({ c, setModal }: { c: Ctx; setModal: (m: Modal) => void }) {
           ))}</ul>
         </div>
       ))}
+      <button className="fab" aria-label="Add item" onClick={() => setModal({ k: 'item' })}><Icon name="plus" /></button>
     </section>
   );
 }
@@ -265,7 +288,7 @@ function Trips({ c, open, setModal, backupReminderDismissed, dismissBackupRemind
       {backupDue && !backupReminderDismissed && <div className="card backup-banner"><div className="between"><b>Back up your packing lists</b><button onClick={dismissBackupReminder} aria-label="Dismiss backup reminder">✕</button></div><small>Export a backup from Settings to keep your lists safe.</small></div>}
       <div className="seg">{(['active', 'archive'] as const).map((k) => (
         <button key={k} className={seg === k ? 'on' : ''} onClick={() => setSeg(k)}>{k === 'active' ? 'Active' : 'Archive'}</button>))}</div>
-      {!list.length && <p className="empty">{seg === 'archive' ? 'Archived trips will appear here.' : 'No trips yet. Create a trip to generate a checklist from your packing rules.'}</p>}
+      {!list.length && (seg === 'archive' ? <p className="empty">Archived trips will appear here.</p> : <div className="empty-state"><EmptyIllustration kind="trips" /><p>Create a trip and PackMatrix will build a checklist from your rules.</p><button className="pri" onClick={() => setModal({ k: 'trip', mode: 'create' })}>Create your first trip</button></div>)}
       <ul>{list.map((t) => {
         const rows = s.checklist.filter((r) => r.tripId === t.id);
         const done = rows.filter((r) => r.isPacked).length;
@@ -281,6 +304,7 @@ function Trips({ c, open, setModal, backupReminderDismissed, dismissBackupRemind
           </li>
         );
       })}</ul>
+      <button className="fab" aria-label="Create trip" onClick={() => setModal({ k: 'trip', mode: 'create' })}><Icon name="plus" /></button>
     </section>
   );
 }
@@ -397,12 +421,9 @@ function TripDetail({ c, id, back, setModal }: { c: Ctx; id: string; back: () =>
   return (
     <section>
       <div className="head"><button onClick={back}>‹ Trips</button></div>
-      <div className="card">
-        <h2>{trip.name}</h2>
-        <div className="mut">{trip.destination}</div>
-        <small>{fmtDate(trip.startDate)} – {fmtDate(trip.endDate)} · {TRIP_LABEL[trip.tripType]}</small>
-        <progress value={packed} max={rows.length || 1} />
-        <div className="between"><span><b>{rows.length}</b> <small>Items</small></span><span><b>{packed}</b> <small>Packed</small></span><span><b>{pct}%</b> <small>Complete</small></span></div>
+      <div className="card trip-summary">
+        <div><h2>{trip.name}</h2><div className="mut">{trip.destination}</div><small>{fmtDate(trip.startDate)} – {fmtDate(trip.endDate)} · {TRIP_LABEL[trip.tripType]}</small></div>
+        <div className="progress-summary"><div className="progress-ring" style={{ background: `conic-gradient(var(--acc) ${pct}%, var(--line) 0)` }}><b>{pct}%</b></div><div><b>{packed} / {rows.length}</b><small>Packed</small></div></div>
         <label className="chk"><input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} />Hide packed items</label>
       </div>
       <div className="row wrap">
@@ -413,32 +434,42 @@ function TripDetail({ c, id, back, setModal }: { c: Ctx; id: string; back: () =>
         <button onClick={() => setModal({ k: 'template', id })}>Save as Template</button>
         <button onClick={archive}>{trip.isArchived ? 'Restore' : 'Archive'}</button>
       </div>
-      <h3>Still To Pack ({remaining.length})</h3>
-      {remaining.length ? <ul>{remaining.map((r) => <li key={r.id}>{item(r)?.name ?? 'Deleted item'}</li>)}</ul> : <p className="empty">All packed 🎉</p>}
+      <h3 className="section-title">Still To Pack ({remaining.length})</h3>
+      {remaining.length ? <ul>{remaining.map((r) => <li key={r.id}>{item(r)?.name ?? 'Deleted item'}</li>)}</ul> : <p className="empty">All packed</p>}
       {groups.map(([cat, list]) => {
         const vis = hide ? list.filter((r) => !r.isPacked) : list;
         if (!vis.length) return null;
         return (
           <div key={cat.id}>
-            <h3 className="between"><span>{cat.name}</span><small>{list.filter((r) => r.isPacked).length} / {list.length}</small></h3>
-            <ul>{vis.map((r) => (
-              <li key={r.id} className="between" onClick={() => toggle(r.id)}>
-                <div>
-                  <span className={r.isPacked ? 'done' : ''}>{r.isPacked ? '✅' : '⭕️'} {item(r)?.name ?? 'Deleted item'}{r.quantity > 1 && ` ×${r.quantity}`}</span>
-                  {r.notes && <small> {r.notes}</small>}{r.wasManuallyAdded && <small> · Manually added</small>}
-                </div>
-                <div className="row">
-                  <button onClick={(e) => { e.stopPropagation(); setModal({ k: 'checklistItem', id: r.id }); }}>Edit</button>
-                  <button onClick={(e) => { e.stopPropagation(); remove(r.id); }}>✕</button>
-                </div>
-              </li>
-            ))}</ul>
+            <h3 className="section-title between"><span>{cat.name}</span><small>{list.filter((r) => r.isPacked).length} / {list.length}</small></h3>
+            <ul>{vis.map((r) => <ChecklistRow key={r.id} row={r} item={item(r)} onToggle={() => toggle(r.id)} onEdit={() => setModal({ k: 'checklistItem', id: r.id })} onRemove={() => remove(r.id)} />)}</ul>
           </div>
         );
       })}
       {!rows.length && <p className="empty">No items yet. Add items manually or regenerate from the trip rules.</p>}
     </section>
   );
+}
+
+function ChecklistRow({ row, item, onToggle, onEdit, onRemove }: { row: TripItem; item?: Item; onToggle: () => void; onEdit: () => void; onRemove: () => void }) {
+  const [offset, setOffset] = useState(0);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const swiping = useRef(false);
+  const skipClick = useRef(false);
+  const closeOrReveal = () => setOffset((value) => value < -48 ? -144 : 0);
+  return <div className="swipe-row">
+    <div className="swipe-actions"><button aria-label={`Edit ${item?.name ?? 'item'}`} onClick={onEdit}><Icon name="edit" /></button><button className="danger" aria-label={`Remove ${item?.name ?? 'item'}`} onClick={onRemove}><Icon name="trash" /></button></div>
+    <li className={`checklist-row ${row.isPacked ? 'packed' : ''}`} style={{ transform: `translateX(${offset}px)` }} onClick={() => { if (skipClick.current) { skipClick.current = false; return; } onToggle(); }} onPointerDown={(e) => { start.current = { x: e.clientX, y: e.clientY }; swiping.current = false; e.currentTarget.setPointerCapture(e.pointerId); }} onPointerMove={(e) => {
+      if (!start.current) return;
+      const dx = e.clientX - start.current.x, dy = e.clientY - start.current.y;
+      if (!swiping.current && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) swiping.current = true;
+      if (swiping.current) { e.preventDefault(); setOffset(Math.max(-144, Math.min(0, dx))); }
+    }} onPointerUp={() => { if (swiping.current) { skipClick.current = true; closeOrReveal(); } start.current = null; swiping.current = false; }} onPointerCancel={() => { start.current = null; swiping.current = false; setOffset(0); }}>
+      <button className="check-toggle" aria-label={row.isPacked ? `Mark ${item?.name ?? 'item'} unpacked` : `Mark ${item?.name ?? 'item'} packed`} onClick={(e) => { e.stopPropagation(); onToggle(); }}>{row.isPacked && <Icon name="check" size={20} />}</button>
+      <div className="checklist-copy"><b>{item?.name ?? 'Deleted item'}{row.quantity > 1 && ` ×${row.quantity}`}</b>{row.notes && <small>{row.notes}</small>}{row.wasManuallyAdded && <small>Manually added</small>}</div>
+      <div className="desktop-row-actions"><button aria-label={`Edit ${item?.name ?? 'item'}`} onClick={(e) => { e.stopPropagation(); onEdit(); }}><Icon name="edit" /></button><button className="danger" aria-label={`Remove ${item?.name ?? 'item'}`} onClick={(e) => { e.stopPropagation(); onRemove(); }}><Icon name="trash" /></button></div>
+    </li>
+  </div>;
 }
 
 function ChecklistItemForm({ c, id }: { c: Ctx; id: string }) {
